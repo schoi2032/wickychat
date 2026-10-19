@@ -870,14 +870,13 @@ export default function ChatApp({
                                 <p>Message removed by moderation.</p>
                               ) : (
                                 <>
-                                  {message.importance &&
-                                    message.importance !== "unimportant" && (
-                                      <span
-                                        className={`importance-tag importance-${message.importance}`}
-                                      >
-                                        {labels[message.importance]}
-                                      </span>
-                                    )}
+                                  {message.importance && (
+                                    <span
+                                      className={`importance-tag importance-${message.importance}`}
+                                    >
+                                      {labels[message.importance]}
+                                    </span>
+                                  )}
                                   {message.ai_tag && (
                                     <span className="label-tag">
                                       {message.ai_tag === "bot"

@@ -19,6 +19,12 @@ test("database migrations enforce membership, teacher priority, reactions, and s
     await db.exec(
       await readFile(new URL("20261015000000_chat_features.sql", root), "utf8"),
     );
+    await db.exec(
+      await readFile(
+        new URL("20261019000000_moderation_notifications.sql", root),
+        "utf8",
+      ),
+    );
     assert.equal(
       (await db.query("select count(*)::int as n from chats")).rows[0].n,
       0,
@@ -164,6 +170,21 @@ test("database migrations enforce membership, teacher priority, reactions, and s
         )
       ).rows[0].user_id,
       ids[3],
+    );
+    await db.query("update messages set status='hidden' where id=$1", [
+      message,
+    ]);
+    const hiddenNotifications = (
+      await db.query(
+        "select body, read_at from notifications where message_id=$1",
+        [message],
+      )
+    ).rows;
+    assert(hiddenNotifications.length > 0);
+    assert(
+      hiddenNotifications.every(
+        (item) => item.body === "Message removed" && item.read_at,
+      ),
     );
     const outsider = randomUUID();
     await db.query(

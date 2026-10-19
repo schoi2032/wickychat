@@ -227,6 +227,16 @@ function home(state: LocalState, me: Profile) {
       .map((account) => publicPerson(account.profile)),
   };
 }
+function hideMessage(state: LocalState, message: Message) {
+  message.status = "hidden";
+  state.notifications
+    .filter((item) => item.message_id === message.id)
+    .forEach((item) => {
+      item.body = "Message removed";
+      item.read_at = now();
+    });
+}
+
 function messageById(state: LocalState, id: number, me: Profile) {
   const message = state.messages.find((item) => item.id === id);
   if (!message || (message.status !== "visible" && !mod(me)))
@@ -557,6 +567,9 @@ export async function handleLocalApi(req: Request, parts: string[]) {
           remaining.map((member) => member.id),
         );
         chat.members = remaining;
+        state.notifications = state.notifications.filter(
+          (item) => item.chat_id !== chat.id || item.user_id !== target.id,
+        );
         assignOwner(state, chat);
         return ok({ removed: target.id });
       }
@@ -599,7 +612,9 @@ export async function handleLocalApi(req: Request, parts: string[]) {
             (message) =>
               message.chat_id === chat.id &&
               message.id < before &&
-              message.body.toLowerCase().includes((query.get("q") || "").toLowerCase()) &&
+              message.body
+                .toLowerCase()
+                .includes((query.get("q") || "").toLowerCase()) &&
               (message.status === "visible" || mod(me)),
           );
           return ok({
@@ -727,7 +742,7 @@ export async function handleLocalApi(req: Request, parts: string[]) {
             "forbidden",
             "Only the sender or a moderator can remove this message.",
           );
-        message.status = "hidden";
+        hideMessage(state, message);
         return ok({ deleted: message.id });
       }
       if (parts.length === 2 && method === "GET")
@@ -737,7 +752,15 @@ export async function handleLocalApi(req: Request, parts: string[]) {
       if (method === "GET")
         return ok(
           state.notifications
-            .filter((item) => item.user_id === me.id)
+            .filter(
+              (item) =>
+                item.user_id === me.id &&
+                state.chats.some(
+                  (chat) =>
+                    chat.id === item.chat_id &&
+                    chat.members.some((member) => member.id === me.id),
+                ),
+            )
             .sort(
               (a, b) =>
                 Number(Boolean(a.read_at)) - Number(Boolean(b.read_at)) ||
@@ -898,9 +921,7 @@ export async function handleLocalApi(req: Request, parts: string[]) {
           if (input.hide_message && report.message_id)
             state.messages
               .filter((message) => message.id === report.message_id)
-              .forEach((message) => {
-                message.status = "hidden";
-              });
+              .forEach((message) => hideMessage(state, message));
           report.status = input.status;
           report.resolved_by = input.status === "open" ? null : me.id;
           report.resolved_at = input.status === "open" ? null : now();

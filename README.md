@@ -1,5 +1,9 @@
 # WICKY Chat
 
+**[Open the WICKY Chat website](https://wickychat-ci.blondpetal2.chatgpt.site)** · Private site; sign in with your authorized ChatGPT account.
+
+The GitHub repository contains the source code. The link above opens the actual app. The hosted edition and deployment configuration are in `hosted/`; the root application can also run locally or use Supabase.
+
 A blue-and-white school chat app built by Output Club with Next.js, React, and Supabase. The app starts with **no chats or sample messages**. Conversations are created only when you choose to create one.
 
 ## Run on localhost
@@ -43,7 +47,7 @@ npm run start:local
 
 ## Shared school deployment
 
-Create a Supabase project and apply **both** SQL migrations in `supabase/migrations/` in filename order. Configure Google OAuth with the `chadwickschool.org` school domain, and add the app's `/auth/callback` URL to the allowed redirects.
+Create a Supabase project and apply **all** SQL migrations in `supabase/migrations/` in filename order. Configure Google OAuth with the `chadwickschool.org` school domain, and add the app's `/auth/callback` URL to the allowed redirects.
 
 Copy `.env.example` to `.env.local` and configure the Supabase project URL, public anon key, and server-only service role key. Never commit real credentials. With these configured, the app uses Google school sign-in, shared database storage, Supabase realtime updates with polling as a fallback, and Supabase storage for images and stickers.
 
@@ -55,7 +59,7 @@ update public.profiles set role = 'admin' where email = 'your-school-email@chadw
 
 After that, administrators can manage roles in the app. Creating a local account never grants privileges in the shared school database. The local file service is unavailable when Supabase mode is active.
 
-Hosted deployments need Supabase configuration. Local file storage is intended for a single local server process, not serverless or multi-server hosting.
+The root Next.js app needs Supabase configuration for shared hosting. The `hosted/` edition uses the Sites sign-in gateway, D1, and R2 instead, and its access policy currently allows only the owner. Local file storage is intended for a single local server process, not serverless or multi-server hosting.
 
 ## Verification
 

@@ -363,6 +363,11 @@ test("reporting and moderation hide messages from students", async () => {
       (message) => message.id === messages[0].id,
     ),
   );
+  const removedNotification = (await users.alex.request("/notifications")).find(
+    (item) => item.message_id === messages[0].id,
+  );
+  assert.equal(removedNotification.body, "Message removed");
+  assert(removedNotification.read_at);
   const userReport = await users.alex.request("/reports", {
     method: "POST",
     status: 201,
@@ -483,6 +488,15 @@ test("search filters messages and paginates without exposing other chats", async
     status: 404,
     body: { emoji: "👍" },
   });
+});
+
+test("removed members lose chat and notification access", async () => {
+  assert((await users.drew.request("/notifications")).length > 0);
+  await teacher.request(`/chats/${group.id}/members/${users.drew.profile.id}`, {
+    method: "DELETE",
+  });
+  await users.drew.request(`/chats/${group.id}/messages`, { status: 404 });
+  assert.deepEqual(await users.drew.request("/notifications"), []);
 });
 
 test("cross-origin mutations are rejected and logout invalidates the session", async () => {
