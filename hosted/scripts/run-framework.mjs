@@ -14,7 +14,6 @@ if (managedLinux && command === "build") {
   process.exit(result.status ?? 1);
 }
 
-// Import in this process so the preview owner retains its PID and signals.
 const cli = new URL(managedLinux
   ? "../node_modules/vite/bin/vite.js"
   : "../node_modules/vinext/dist/cli.js", import.meta.url);

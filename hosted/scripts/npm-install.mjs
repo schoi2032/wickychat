@@ -15,9 +15,6 @@ import { fileURLToPath } from "node:url";
 
 const MAX_PACKAGES = 100_000;
 
-// npm reports tarball cache reads separately from registry metadata requests.
-// Count unique installed tarball URLs, not image seeds or network bytes. Require
-// complete coverage of npm's installed lock so older/partial logs stay unknown.
 export class NpmCacheProgress {
   entries = new Map();
   invalid = false;
@@ -35,7 +32,6 @@ export class NpmCacheProgress {
     );
     if (!match) return;
     const [, spec, status] = match;
-    // Pacote's direct content-cache log uses name@URL; HTTP cache logs use URL.
     const url = spec.replace(/^(?:@[^/]+\/)?[^@/]+@(?=https?:\/\/)/, "");
     if (
       url.length > 4096 ||
@@ -64,8 +60,6 @@ export class NpmCacheProgress {
       if (this.registry) {
         const locked = new URL(url);
         if (locked.hostname === "registry.npmjs.org") {
-          // Match npm/pacote's host rewrite and registry-fetch's path prefix
-          // using npm's effective configuration, never an arbitrary suffix.
           candidates = [
             ...new Set([
               url,
@@ -86,7 +80,6 @@ export class NpmCacheProgress {
       )
         return {};
       for (const candidate of matches) observed.add(candidate);
-      // A corrupt direct-cache hit followed by a mirror fetch is a download.
       if (matches.some((candidate) => this.entries.get(candidate)))
         downloaded++;
     }
@@ -157,7 +150,6 @@ export async function runNpmInstall(command, cacheSeed = "not_applicable") {
     const lines = createInterface({ input: child.stderr, crlfDelay: Infinity });
     lines.on("line", (line) => {
       progress.accept(line);
-      // Do not add package URLs to normal helper output just for telemetry.
       if (!line.startsWith("npm http ")) process.stderr.write(`${line}\n`);
     });
     let startError;
@@ -202,7 +194,6 @@ export async function runNpmInstall(command, cacheSeed = "not_applicable") {
         );
       }
     } catch {
-      // Telemetry must not change installation behavior.
     } finally {
       if (descriptor !== undefined) {
         try {

@@ -17,7 +17,6 @@ export type ConnectorFailureStatus =
   | "tool_error"
   | "upstream_error"
   | "internal_error"
-  // Starter-only: no runtime capability or active local preview session.
   | "binding_unavailable";
 
 export type ConnectorContent = {
@@ -25,7 +24,6 @@ export type ConnectorContent = {
   structuredContent?: Json;
 };
 
-// Matches Sites Dispatch's explicit invocation outcome, plus binding_unavailable.
 export type ConnectorResult =
   | {
       status: "success";
@@ -40,7 +38,6 @@ export type ConnectorResult =
       result?: ConnectorContent;
     };
 
-/** A server-side binding supplied by the runtime, never by a browser. */
 export type ConnectorBinding = {
   invoke(
     connectorId: string,
@@ -50,7 +47,6 @@ export type ConnectorBinding = {
   getContext?(): Promise<ConnectorContext>;
 };
 
-/** Site policy and cached tool metadata, not authentication or provider health. */
 export type ConnectorContext =
   | {
       status: "success";
@@ -72,7 +68,6 @@ export type ConnectorContext =
         | "upstream_error";
     };
 
-/** Use in a Site server route. Connection selection and credentials stay in the host. */
 export function createConnectors(binding: ConnectorBinding | undefined) {
   return {
     async getContext(): Promise<ConnectorContext> {
@@ -158,8 +153,6 @@ export function createConnectors(binding: ConnectorBinding | undefined) {
         };
       }
       try {
-        // Preserve the host's status, message, result and optional diagnostics.
-        // Do not replay a call after a transport failure: it may have completed.
         return await binding.invoke(connectorId, actionName, args);
       } catch {
         return {

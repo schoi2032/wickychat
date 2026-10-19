@@ -68,8 +68,7 @@ function emptyState(): LocalState {
   };
 }
 
-// All local API requests share this queue, including during development hot reloads.
-// Atomic rename means a stopped process cannot leave half of a JSON document.
+// Request queue
 const shared = globalThis as typeof globalThis & {
   wickyStoreQueue?: Promise<unknown>;
 };

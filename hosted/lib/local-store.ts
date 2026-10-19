@@ -25,8 +25,6 @@ function emptyState(): LocalState {
   };
 }
 
-// Compare-and-swap prevents concurrent server instances from losing each other's changes.
-// Read-only polls do not rewrite the database when no account or record changed.
 export async function withLocalStore<T>(
   change: (state: LocalState) => Promise<T> | T,
   write = false,

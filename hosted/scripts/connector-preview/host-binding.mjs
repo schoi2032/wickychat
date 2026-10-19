@@ -8,12 +8,6 @@ import {
   sessionOptionsSchema,
 } from "./protocol.mjs";
 
-// Checks connector calls while the agent builds and tests a Site locally.
-// connector-preview-session.mjs uses this helper after the agent chooses the read
-// actions the Site may use. For each Site request, it checks that selection and
-// the session limits before asking the agent to make the actual tool call.
-// It also handles timeouts, shutdown, and which result fields reach the Site.
-// This runs in the agent's temporary session, not in the deployed Site.
 const messages = {
   invalid_request: "This app request is invalid or too large.",
   binding_unavailable:
@@ -91,7 +85,6 @@ export function createPreviewBinding({ tools, ...options }) {
       } catch {
         return reply(failure("invalid_request"));
       }
-      // Recheck after reading the request; shutdown can happen while it streams.
       if (ended.signal.aborted || Date.now() >= expiresAt)
         return reply(failure("binding_unavailable"));
       const invoke = grants.get(
@@ -105,8 +98,6 @@ export function createPreviewBinding({ tools, ...options }) {
       let onEnd;
       try {
         const result = await Promise.race([
-          // A timeout ends our wait, not the provider call. Count that work
-          // against concurrency until it settles, without blocking other slots.
           Promise.resolve()
             .then(() => invoke(call.arguments))
             .then(publicResult)
@@ -146,8 +137,6 @@ export async function readBounded(request, limit) {
   if (!request.body) throw new Error("Missing body");
   const stream = Readable.fromWeb(request.body);
   try {
-    // raw-body owns byte limits and stream errors; strict decoding rejects
-    // malformed UTF-8 instead of silently changing the caller's arguments.
     return new TextDecoder("utf-8", { fatal: true }).decode(
       await getRawBody(stream, { limit }),
     );
@@ -160,11 +149,8 @@ function publicResult(result) {
   const parsed = resultSchema.safeParse(result);
   if (!parsed.success) return failure("upstream_error");
   result = parsed.data;
-  // Native tools return MCP results; convert once at the preview host boundary.
-  // Never accept provider-authored top-level status or transport metadata.
   const payload = {
     content: result.content,
-    // Like the hosted binding, preserve every JSON value, including null.
     ...(result.structuredContent !== undefined
       ? { structuredContent: result.structuredContent }
       : {}),

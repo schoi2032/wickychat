@@ -18,14 +18,6 @@ import {
   sessionOptionsSchema,
 } from "./protocol.mjs";
 
-// The agent starts this script through its terminal tool after creating a local
-// Site and selecting connector read actions, following references/app-integrations.md#local-preview:
-//   node <site-directory>/scripts/connector-preview/connector-preview-session.mjs <site-directory> <grants.json>
-// During the agent development loop, the Site preview writes requests into a shared folder.
-// This script checks each request with host-binding.mjs, then asks the agent over
-// stdout to call the connector. The agent returns the tool result through stdin,
-// and this script writes it back for the Site. The agent stops the script when
-// previewing ends; neither the browser nor a deployed Site starts this process.
 const { positionals, values } = parseArgs({
   allowPositionals: true,
   options: {
@@ -77,8 +69,6 @@ const binding = createPreviewBinding({
     ...grant,
     async invoke(args) {
       const requestId = randomUUID();
-      // JSON-RPC owns response matching and pending-call cleanup. Do not put an
-      // RPC timeout here: uncertain calls occupy their slot until they settle.
       const response = await rpc.requestAdvanced({
         jsonrpc: "2.0",
         id: requestId,
@@ -99,8 +89,6 @@ const binding = createPreviewBinding({
 });
 await mkdir(directory, { recursive: true, mode: 0o700 });
 try {
-  // One owner per project. A crashed session must be explicitly cleaned up;
-  // never silently take over another agent's connector session.
   await writeFile(
     descriptor,
     JSON.stringify({
@@ -133,15 +121,12 @@ async function serve(name) {
       await rename(`${output}.tmp`, output);
     }
   } catch {
-    // A timed-out caller can remove its request. The native call is never retried.
   } finally {
     await rm(path.join(directory, name), { force: true });
     active.delete(name);
   }
 }
 let scanning = false;
-// The mailbox crosses network namespaces through the shared project directory.
-// Atomic renames keep the reader from seeing partially written messages.
 const poller = setInterval(async () => {
   if (closing || scanning) return;
   scanning = true;

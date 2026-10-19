@@ -1,9 +1,7 @@
 import { z } from "zod/v4";
 
-/** Validate and project runtime results onto the public connector response. */
 export function connectorResponse(result: unknown): Response {
   try {
-    // Keep server-only parsing lazy so client recovery UI can tree-shake it out.
     const requestId = z
       .string()
       .regex(/^[A-Za-z0-9._:-]{1,128}$/)
@@ -48,13 +46,11 @@ export function connectorResponse(result: unknown): Response {
         : failure;
     const parsed = schema.safeParse(result);
     if (parsed.success) {
-      // As in the binding contract, JSON status determines the outcome.
       return Response.json(parsed.data, {
         headers: { "Cache-Control": "private, no-store" },
       });
     }
   } catch {
-    // Cyclic or otherwise non-serializable runtime values are also unconfirmed.
   }
   return Response.json(
     {
@@ -66,7 +62,6 @@ export function connectorResponse(result: unknown): Response {
   );
 }
 
-/** Presentation only. The caller supplies the starter's server-generated SIWC URL. */
 export function connectorErrorRecovery(
   error: { status: string; message: string },
   connectorName: string,
@@ -78,6 +73,5 @@ export function connectorErrorRecovery(
       action: { label: `Connect ${connectorName}`, href: reconnectHref },
     };
   }
-  // Other outcomes do not prove that consent is missing or that replay is safe.
   return { message: error.message };
 }

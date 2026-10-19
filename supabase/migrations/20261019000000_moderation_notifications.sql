@@ -1,4 +1,4 @@
--- Remove moderated content from notification previews as well as message history.
+-- Notification previews
 create function public.redact_hidden_message_notifications() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin

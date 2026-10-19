@@ -1,5 +1,4 @@
--- Priority labels, notifications, limited reactions, and membership invariants.
--- This migration creates no chats, people, stickers, or messages.
+-- Chat features
 alter table public.messages add column importance text not null default 'unimportant'
   check (importance in ('important', 'slightly_important', 'unimportant'));
 
@@ -68,7 +67,7 @@ end;
 $$;
 create trigger after_message_notification after insert on public.messages for each row execute function public.notify_chat_members();
 
--- Serialize joins and sends within each chat so simultaneous requests obey the limits.
+-- Membership and message limits
 create or replace function public.member_rules() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare joining_role text; member_count integer; has_teacher boolean;
@@ -139,7 +138,7 @@ create constraint trigger validate_role_membership after update on public.profil
   deferrable initially deferred for each row execute function public.validate_profile_membership();
 revoke execute on function public.check_chat_invariants(uuid) from public, anon, authenticated;
 
--- Leaving or handing over a chat must be one transaction so it always has an owner.
+-- Chat ownership
 create function public.remove_chat_member(actor uuid, c uuid, target uuid) returns void
 language plpgsql security definer set search_path = public as $$
 declare actor_role text; target_role text; target_member_role text; replacement uuid;

@@ -19,8 +19,6 @@ const uncertain = {
     "The app did not return a confirmed result. The action may have completed; check before trying again.",
 };
 
-// A development-only adapter. The shared project directory connects the preview
-// process to its owning agent even when they use different network namespaces.
 export function connectorPreview() {
   const bridgeToken = randomUUID();
   let root;
@@ -79,8 +77,6 @@ export function connectorPreview() {
           "Connected apps are only available in Site server routes.",
         );
       }
-      // Auxiliary Workers load before Vite starts listening. strictPort keeps
-      // this configured address stable when the server opens its socket.
       const url = `http://127.0.0.1:${server.config.server.port}${endpoint}`;
       const contextUrl = `http://127.0.0.1:${server.config.server.port}${contextEndpoint}`;
       return `export default { async getContext() {
@@ -113,7 +109,6 @@ export function connectorPreview() {
         }
         try {
           const session = await readSession();
-          // Preview grants do not establish hosted catalog visibility.
           if (
             !Array.isArray(session.connectorIds) ||
             !session.connectorIds.every((id) => typeof id === "string")
@@ -161,8 +156,6 @@ export function connectorPreview() {
           await writeFile(`${requestPath}.tmp`, body, { mode: 0o600 });
           await rename(`${requestPath}.tmp`, requestPath);
           submitted = true;
-          // Read the owner's deadline per call, so a restarted session can use
-          // longer provider waits without rebuilding or restarting the Site.
           const deadline = Math.min(
             session.expiresAt ?? Infinity,
             Date.now() + session.timeoutMs + 2000,
@@ -173,16 +166,12 @@ export function connectorPreview() {
               return;
             } catch (error) {
               if (error.code !== "ENOENT") throw error;
-              // Session shutdown removes the mailbox. Stop promptly even when
-              // the configured provider deadline is several minutes away.
               await access(directory);
             }
             await delay(50);
           }
           res.end(JSON.stringify(uncertain));
         } catch {
-          // raw-body pauses oversized requests; drain the remainder so the HTTP
-          // connection can finish without retaining an unread request stream.
           req.resume();
           res.end(JSON.stringify(submitted ? uncertain : unavailable));
         } finally {

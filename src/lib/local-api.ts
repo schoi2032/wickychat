@@ -249,7 +249,7 @@ function messageById(state: LocalState, id: number, me: Profile) {
   return message;
 }
 
-// This service is deliberately unavailable on hosted deployments and non-loopback hosts.
+// Host checks
 export async function handleLocalApi(req: Request, parts: string[]) {
   const host = req.headers.get("host") || "";
   let hostname = "";

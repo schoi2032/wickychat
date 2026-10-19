@@ -195,7 +195,6 @@ function messageById(state: LocalState, id: number, me: Profile) {
   return message;
 }
 
-// Identity comes only from the hosting gateway; the browser cannot assign its own role or user ID.
 export async function handleLocalApi(
   req: Request,
   parts: string[],
@@ -217,7 +216,6 @@ export async function handleLocalApi(
     );
   const route = parts.join("/");
   const query = new URL(req.url).searchParams;
-  // Parse once: retries validate the same input without re-reading a locked stream.
   if (Number(req.headers.get("content-length")) > 3 * 1024 * 1024)
     throw new ApiError(413, "too_big", "Uploads must be smaller than 2 MB.");
   const multipart = req.headers
